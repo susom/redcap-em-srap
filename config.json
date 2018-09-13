@@ -1,0 +1,73 @@
+{
+  "name": "sRAP system to integrate REDCap, Salesforce and iLabs",
+  "namespace": "Stanford\\sRAP",
+  "description": "This is a help system for users looking for RIT/RIC support.",
+  "authors": [
+    {
+      "name": "Andy Martin",
+      "email": "andy123@stanford.edu",
+      "institution": "Stanford University"
+    },
+    {
+      "name": "Susan Weber",
+      "email": "scweber@stanford.edu",
+      "institution": "Stanford University"
+    },
+    {
+      "name": "Lee Ann Yasukawa",
+      "email": "yasukawa@stanford.edu",
+      "institution": "Stanford University"
+    }
+  ],
+
+  "permissions": [
+  ],
+
+  "links": {
+    "control-center": [
+      {
+        "name": "Research Portal Instructions",
+        "icon": "gear",
+        "url": "pages/instructions.php"
+      }
+
+    ],
+    "project": [
+    ]
+  },
+
+  "no-auth-pages": [
+    "sRAP",
+    "pages/sRAP_salesforce"
+  ],
+
+  "system-settings": [
+    {
+      "key": "redcap_pid",
+      "name": "<b>REDCap Project ID storing Help information</b>",
+      "required": true,
+      "type": "project-id"
+    },
+    {
+      "key": "shared_secret",
+      "name": "<b>Shared secret between Salesforce and REDCap</b>",
+      "required": true,
+      "type": "text"
+    },
+    {
+      "key": "salesforce_url",
+      "name": "<b>Salesforce API endpoint</b>",
+      "required": true,
+      "type": "text"
+    },
+    {
+      "key": "ilabs_url",
+      "name": "<b>iLabs API endpoint</b>",
+      "required": true,
+      "type": "text"
+    }
+  ],
+
+  "project-settings": [
+  ]
+}
