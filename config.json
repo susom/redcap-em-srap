@@ -30,9 +30,18 @@
         "icon": "gear",
         "url": "pages/instructions.php"
       }
-
     ],
     "project": [
+      {
+        "name": "Research Portal Default Page",
+        "icon": "gear",
+        "url": "pages/index.php"
+      },
+      {
+        "name": "API Endpoint for Salesforce updates",
+        "icon": "gear",
+        "url": "pages/sRAP_salesforce.php?NOAUTH"
+      }
     ]
   },
 
