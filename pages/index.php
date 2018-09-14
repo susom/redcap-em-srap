@@ -4,13 +4,12 @@ namespace Stanford\sRAP;
 
 use \REDCap;
 
-global $pid, $user, $message;
+global $pid, $user;
 
 $pid = "27";
 //$user = USERID;
 $user = 'yasukawa';
 $pi_projects = null;
-$personnal_project = "GENERAL QUESTIONS";
 
 //define('PROJECT_ID', $pid);
 
@@ -35,15 +34,15 @@ if ($action == 'pi_projects') {
 
             if ($list <> false) {
                 $pi_projects .= '<div id="pi_portal_proj">';
-                $pi_projects .= '<h4>Please select the project you are interested in joining:</h4><br>';
-                $pi_projects .= '<h4>Research Portal Projects for ' . $pi_sunetid . ':</h4>';
-                $pi_projects .= '<select id="pi_projects">';
+                $pi_projects .= '<h4>Please select the project you wish to join:</h4><br>';
+                $pi_projects .= '<h6>Research Portal Projects for ' . $pi_sunetid . ':</h6>';
+                $pi_projects .= '<select id="pi_projects" onchange="selectedPortalProject(value)">';
                 $pi_projects .= '<option value="">-- select one --</option>';
                 foreach ($proj as $key => $value) {
                     $pi_projects .= '<option value="' . $value["id"] . '">' . $value["rp_name_short"] . '</option>';
                 }
-                $pi_projects .= '<option value="">None of the above</option>';
-                $pi_projects .= '</select></div><br><br>';
+                $pi_projects .= '<option value="None">None of the above</option>';
+                $pi_projects .= '</select></div><br>';
             }
         }
 
@@ -55,62 +54,43 @@ if ($action == 'pi_projects') {
 
         // If PI has valid IRBs, display them but keep them hidden for now
         if (!empty($protocols)) {
-            $pi_projects .= '<div id="pi_irb_proj"><h4>IRBs for ' . $pi_sunetid . ':</h4>';
-            $pi_projects .= '<select id="pi_irbs">';
+            $pi_projects .= '<div id="pi_irb_proj">';
+            if (!empty($proj_list)) {
+                $pi_projects .= '<h5>Is your project related to an IRB?</h5><br>';
+            }
+            $pi_projects .= '<h6>IRBs for ' . $pi_sunetid . ':</h6>';
+            $pi_projects .= '<select id="pi_irbs" onchange="selectedIRBProject(value)">';
             $pi_projects .= '<option value="">-- select one --</option>';
             foreach ($protocols as $key => $value) {
                 $pi_projects .= '<option value="IRB' . $value["protocolNumber"] . '">' . $value["protocolTitle"] . '</option>';
             }
-            $pi_projects .= '<option value="">None of the above</option>';
+            $pi_projects .= '<option value="None">None of the above</option>';
             $pi_projects .= '</select></div><br><br>';
         }
 
         // PI does not have portal projects or IRBs yet. Just display a message so user knows
-        if (is_null($pi_projects)) {
-            $pi_projects .= "The PI $pi_sunetid does not currently have any portal projects or IRBs. Please continue to create a new project.";
+        if (empty($proj_list) && empty($protocols)) {
+            $pi_projects .= '<div id="no_pi_proj">The PI ' . $pi_sunetid . ' does not currently have any portal projects or IRBs. Please continue to create a new project.</div>';
+        } else {
+            $pi_projects .= '<div id="no_pi_proj">Please continue to create a new project.</div>';
+            $pi_projects .= '<div id="join_pi_proj">Please continue to join the project.</div>';
+            $pi_projects .= '<div id="irb_pi_proj">Please continue to create a new project from this IRB.</div>';
         }
 
         print $pi_projects;
         return;
     }
 
-} else if ($action == 'irb_lookup') {
-    $irb_num = isset($_POST['irb_num']) && !empty($_POST['irb_num']) ? $_POST['irb_num'] : null;
-    $irb_data = get_IRBByIRBNum($irb_num);
-
-    if (($irb_data["isValid"] == "true") and ($irb_data["isPresent"] == "true")
-            and ($irb_data["protocolState"] == "APPROVED")) {
-        $html = "The protocol name is <b>" . $irb_data["protocolTitle"] . "</b><br><br>";
-        $html .= 'Select Next if you want to create a project with this IRB.<br>';
-        $html .= 'Select Previous if you want to start over.';
-        print $html;
-        return;
-    } else {
-        $html = "This IRB is currently *NOT* APPROVED.<br><br>";
-        $html .= 'Select Next if you want to create a project with this IRB.<br>';
-        $html .= 'Select Previous if you want to start over.';
-        print $html;
-        return;
-    }
-
-} else if ($action == 'create_record') {
-    $module->emLog("In create_record");
+} else if ($action == 'process') {
+    $module->emLog("In process");
     $instrument = 'users';
 
-    $pi_first = isset($_POST['pi_first']) && !empty($_POST['pi_first']) ? $_POST['pi_first'] : null;
-    $pi_last = isset($_POST['pi_last']) && !empty($_POST['pi_last']) ? $_POST['pi_last'] : null;
+    $pi_sunetid = isset($_POST['pi_sunetid']) && !empty($_POST['pi_sunetid']) ? $_POST['pi_sunetid'] : null;
     $p_desc = isset($_POST['p_desc']) && !empty($_POST['p_desc']) ? $_POST['p_desc'] : null;
     $irb_num = isset($_POST['irb_num']) && !empty($_POST['irb_num']) ? $_POST['irb_num'] : null;
     $pi_proj = isset($_POST['pi_proj']) && !empty($_POST['pi_proj']) ? $_POST['pi_proj'] : null;
     $pi_irb = isset($_POST['pi_irb']) && !empty($_POST['pi_irb']) ? $_POST['pi_irb'] : null;
     $u_role = isset($_POST['u_role']) && !empty($_POST['u_role']) ? $_POST['u_role'] : null;
-    $u_email = isset($_POST['u_email']) && !empty($_POST['u_email']) ? $_POST['u_email'] : null;
-    $u_phone = isset($_POST['u_phone']) && !empty($_POST['u_phone']) ? $_POST['u_phone'] : null;
-
-    // Look up the sunetID from the PI first and last name
-    if (!is_null($pi_first) and !empty($pi_first) and !is_null($pi_last) and !empty($pi_last)) {
-        $pi_sunetid = name_lookup($pi_first, $pi_last);
-    }
 
     // Get LDAP info for user
     $ldap_user = file_get_contents('http://med.stanford.edu/webtools-dev/stanford_ldap/ldap_lookup.php?token=pXJ5xNwj1P&exact=true&only=displayname,mail,department,suaffiliation,ou,telephonenumber&userid=' . $user);
@@ -118,7 +98,7 @@ if ($action == 'pi_projects') {
 
     // If the user is not the PI, get info for both
     if ($user <> $pi_sunetid) {
-        $ldap_pi = file_get_contents('http://med.stanford.edu/webtools-dev/stanford_ldap/ldap_lookup.php?token=pXJ5xNwj1P&exact=true&only=displayname,mail,department,suaffiliation,ou,telephonenumber&userid=' . $user);
+        $ldap_pi = file_get_contents('http://med.stanford.edu/webtools-dev/stanford_ldap/ldap_lookup.php?token=pXJ5xNwj1P&exact=true&only=displayname,mail,department,suaffiliation,ou,telephonenumber&userid=' . $pi_sunetid);
         $ldap_pi_result = json_decode($ldap_pi);
     }
 
@@ -174,79 +154,11 @@ if ($action == 'pi_projects') {
     $module->emLog("URL in create record: " . $project_page_url);
     print $project_page_url;
     return;
-
-} else if ($action == 'general_question') {
-
-    $module->emLog("In general_question");
-    $p_desc = isset($_POST['p_desc']) && !empty($_POST['p_desc']) ? $_POST['p_desc'] : null;
-    $u_role = isset($_POST['u_role']) && !empty($_POST['u_role']) ? $_POST['u_role'] : null;
-    $u_email = isset($_POST['u_email']) && !empty($_POST['u_email']) ? $_POST['u_email'] : null;
-    $u_phone = isset($_POST['u_phone']) && !empty($_POST['u_phone']) ? $_POST['u_phone'] : null;
-
-    // See if this user has a record that is not associated with a project.
-    $id_fields = array("id");
-    $filter = '[rp_name_short] = "' . $personnal_project . '" and [rp_pi_sunetid] = "' . $user . '"';
-    $module->emLog("This is the filter: " . $filter);
-    $project_id = REDCap::getData($pid, "json", null, $id_fields, null, null, false, false, false, $filter);
-    $module->emLog("This is the project id " . $project_id);
-
-    $module->emLog("This is the personnel project number $project_id for $user");
-
-    if (is_null($project_id)) {
-        // Do an LDAP lookup to get info about this user
-
-
-        // We do not have a general question project set up for this user yet so set one up
-        $next_id = getNextId($pid, 'id', null, '');
-        $module->emLog("This is the next record_id $next_id");
-        $data = array(
-            "id" => $next_id,
-            "id_complete" => 2,
-            "rp_name_short" => $personnal_project,
-            //"rp_pi_first_name"          =>,
-            //"rp_pi_last_name"           =>,
-            "rp_pi_email"               => $u_email,
-            "rp_pi_phone"               => $u_phone,
-            "rp_pi_sunetid"             => $user,
-            //"rp_pi_affliation"          =>,
-            //"rp_pi_department"          =>,
-            "research_project_complete" => 1
-        );
-
-        $module->emLog("This is the data to save: " . json_encode($data));
-        $proj_id = REDCap::saveData($pid, 'json', json_encode(array($data)));
-        $module->emLog("Returned from saveData " . json_encode($proj_id));
-    }
-
-    // Create new token
-    $portal_req_number = mt_rand();
-
-    // Now save user provisionally
-    $instrument = "requests";
-    $user = new sRAP_Instances($pid, $instrument);
-    $instance_id = $user->getNextInstanceId($proj_id);
-    $module->emLog("Next instance id: $instance_id");
-    $module->emLog("request instance data: ");
-    $data = array(
-        "r_date"                => date("Y-m-d"),
-        "r_portal_request_id"   => $portal_req_number,
-        "r_requestor"           => $user,
-        "r_description"         => $p_desc
-    );
-    $module->emLog("request instance data: " . json_encode($data));
-
-    $user->saveInstance($proj_id, array($data), $instance_id);
-
-    $project_page_url = $module->getUrl('pages/sRAP_projects.php') . "&record_id=" . $next_id;
-    $module->emLog("URL in create record for general question: " . $project_page_url);
-    print $project_page_url;
-    return;
-
 }
 
-function create_new_redcap_project($pid, $data) {
-    // We have an IRB number so we need to create a project first
-
+function getUser() {
+    global $user;
+    return $user;
 }
 
 ?>
@@ -329,12 +241,13 @@ function create_new_redcap_project($pid, $data) {
 
             <div class="tab" id="tab3">
                 <h5 id="description2"></h5>
+                <input type = "text" name="user" id="user" value="<?php echo getUser()?>" hidden>
                 <p>
-                    <a><b>What is your role(s) in this project</b></a><br>
-                    <input type="checkbox" name="pi" id="pi" value="pi"> Principal Investigator</input><br>
-                    <input type="checkbox" name="finance" id="finance" value="finance"> Financial Staff</input><br>
-                    <input type="checkbox" name="research" id="research" value="research"> Research Staff</input><br>
-                </p>
+                    <a ><b> What is your role(s) in this project </b ></a ><br>
+                    <input type = "checkbox" name = "pi" id = "pi" value = "pi" > Principal Investigator </input ><br >
+                    <input type = "checkbox" name = "finance" id = "finance" value = "finance" > Financial Staff </input ><br >
+                    <input type = "checkbox" name = "research" id = "research" value = "research" > Research Staff </input ><br >
+               </p>
             </div>
             <br>
             <div style="overflow:auto;">
@@ -361,6 +274,39 @@ function create_new_redcap_project($pid, $data) {
     document.getElementById("no_pi_sunetid").style.display = "none";
     document.getElementById("no_proj_description").style.display = "none";
 
+    function selectedPortalProject(selection) {
+        // If 'None of the above' is selected, unhide the IRB list if there is one.
+        // If No IRB list, unhide the message which tells the user we will create a new portal project.
+        document.getElementById("join_pi_proj").style.display = "none";
+        document.getElementById("irb_pi_proj").style.display = "none";
+
+        if (selection == 'None') {
+            if (document.getElementById("pi_irb_proj")) {
+                document.getElementById("pi_irb_proj").style.display = "inline";
+            } else {
+                document.getElementById("no_pi_proj").style.display = "inline";
+            }
+        } else {
+            // We found the project the user wants to join
+            document.getElementById("join_pi_proj").style.display = "inline";
+            if (document.getElementById("pi_irb_proj")) {
+                document.getElementById("pi_irb_proj").style.display = "none";
+            }
+        }
+    }
+
+    function selectedIRBProject(selection) {
+        // Unhide the message which tells the user we will create a new portal project.
+        document.getElementById("no_pi_proj").style.display = "none";
+        document.getElementById("irb_pi_proj").style.display = "none";
+
+        if (selection == 'None') {
+            document.getElementById("no_pi_proj").style.display = "inline";
+        } else {
+            document.getElementById("irb_pi_proj").style.display = "inline";
+        }
+    }
+
     function showTab(n) {
         // This function will display the specified tab of the form...
         var x = document.getElementsByClassName("tab");
@@ -385,6 +331,7 @@ function create_new_redcap_project($pid, $data) {
         var x = document.getElementsByClassName("tab");
 
         if (currentTab == 1) {
+            var user = document.getElementById("user").value;
             var pi_sunetid = document.getElementById("pi_sunetid").value;
             var proj_description = document.getElementById("proj_desc").value;
             var attest = document.getElementById("pi_attest").checked;
@@ -394,6 +341,14 @@ function create_new_redcap_project($pid, $data) {
             document.getElementById("description1").innerHTML = proj_description;
             document.getElementById("description2").innerHTML = proj_description;
 
+            // If this is the PI, check the PI on the roles page
+            if (user == pi_sunetid) {
+                document.getElementById("pi").checked = true;
+            } else {
+                document.getElementById("pi").checked = false;
+            }
+
+            // Make sure each of the fields has a reasonable value before proceeding
             if ((pi_sunetid.length < 2) || (proj_description.length < 2) || (attest == false)) {
                 n = currentTab - n;
                 if (pi_sunetid.length < 2) {
@@ -408,7 +363,6 @@ function create_new_redcap_project($pid, $data) {
             } else {
                 srap.getPIProjects(pi_sunetid);
             }
-        } else if (currentTab == 2) {
         }
 
         // Hide the current tab:
@@ -418,31 +372,7 @@ function create_new_redcap_project($pid, $data) {
         // if you have reached the end of the form...
         if (currentTab >= x.length) {
             // ... the form gets submitted:
-            /*
-            document.getElementById("ResearchProject").submit();
-            //var pi_proj = document.getElementById("pi_projects").value;
-            //var pi_irbs = document.getElementById("pi_irbs").value;
-            //var u_role = document.getElementById("u_role").value;
-            var u_email = document.getElementById("u_email").value;
-            var u_phone = document.getElementById("u_phone").value;
-            var p_desc = document.getElementById("proj_desc").value;
-
-            var pi_proj = "";
-            var pi_irbs = "";
-            var u_role = "";
-
-            if (pi_first.length == 0 && pi_last.length == 0 && irb_num.length == 0) {
-
-                // This is a general question which is setup different than a research project
-                var question = document.getElementById("general_question").value;
-                srap.general_question(question, u_role, u_email, u_phone);
-
-            } else {
-                srap.createNewRecord(pi_first, pi_last, p_desc, irb_num, pi_proj, pi_irbs,
-                    u_role, u_email, u_phone);
-            }
-            return false;
-            */
+            srap.processRequest();
         }
 
         // Otherwise, display the correct tab:
@@ -481,14 +411,29 @@ function create_new_redcap_project($pid, $data) {
         }).done(function (html) {
             if (html.length > 0 ) {
                 document.getElementById("pi_proj").innerHTML = html;
-           }
+
+                // Figure out what we are going to display.
+                if (document.getElementById("pi_portal_proj")) {
+                    // If the PI has portal projects, just display those first
+                    if (document.getElementById("pi_irb_proj")) {
+                        document.getElementById("pi_irb_proj").style.display = "none";
+                    }
+                    document.getElementById("no_pi_proj").style.display = "none";
+                    document.getElementById("join_pi_proj").style.display = "none";
+                    document.getElementById("irb_pi_proj").style.display = "none";
+                } else if (document.getElementById("pi_irb_proj")) {
+                    // If there are no portal projects but there are IRBs, just display the IRBs
+                    document.getElementById("no_pi_proj").style.display = "none";
+                    document.getElementById("join_pi_proj").style.display = "none";
+                    document.getElementById("irb_pi_proj").style.display = "none";
+                }
+            }
         }).fail(function (jqXHR, textStatus, errorThrown) {
             console.log("Failed in getPIProjects for PI: " + pi_first + " " + pi_last);
         });
     }
 
-/*
-    srap.createNewRecord = function (pi_first, pi_last, p_desc, irb_num, pi_proj, pi_irb, u_role, u_email, u_phone)
+    srap.processRequest = function ()
     {
         // Load PI Info and go look for projects
         $.ajax({
@@ -523,7 +468,6 @@ function create_new_redcap_project($pid, $data) {
 
     }
 
-*/
 </script>
 
 </body>

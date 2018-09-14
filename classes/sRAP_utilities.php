@@ -8,7 +8,6 @@ function filterProjects($pid, $requestor=null) {
 
     global $message, $user, $module;
     $id_fields = array("id");
-    $module->emLog("requestor: "  . $requestor);
 
     if (is_null($requestor) or empty($requestor)) {
         $filterBy = $user;
@@ -26,7 +25,6 @@ function filterProjects($pid, $requestor=null) {
     $project_ids = REDCap::getData($pid, "json", null, $id_fields, null, null, false, false, false, $filter);
     $results2 = json_decode($project_ids);
     $results = array_merge($results1, $results2);
-    $module->emLog("list of projects: " . json_encode($results));
 
     // Make an array of pids
     $proj_ids = array();
