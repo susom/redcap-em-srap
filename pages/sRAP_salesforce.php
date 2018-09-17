@@ -9,7 +9,7 @@ $pid = $module->getSystemSetting("redcap_pid");
 $saved_secret = $module->getSystemSetting("shared_secret");
 $sent_secret = isset($_POST['ss']) && !empty($_POST['ss']) ? $_POST['ss'] : null;
 if ($saved_secret != $sent_secret) {
-    $module->emError("Shared secret is incorrect.", $_POST);
+    $module->emError("Shared secret is incorrect.", printr($_POST, true));
     header("HTTP/1.0 401 Unauthorized");
     exit;
 }
