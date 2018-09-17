@@ -5,12 +5,12 @@ namespace Stanford\sRAP;
 use \REDCap;
 
 // This is storing data into pid=13941. (For testing it is pid 30 on Lee Ann's localhost).
-$module->emLog("Incoming request", printr($_POST, true));
+$module->emLog("Incoming request", $_POST);
 $pid = $module->getSystemSetting("redcap_pid");
 $saved_secret = $module->getSystemSetting("shared_secret");
 $sent_secret = isset($_POST['ss']) && !empty($_POST['ss']) ? $_POST['ss'] : null;
 if ($saved_secret != $sent_secret) {
-    $module->emError("Shared secret is incorrect.", printr($_POST, true));
+    $module->emError("Shared secret is incorrect.", $_POST);
     header("HTTP/1.0 401 Unauthorized");
     exit;
 }
@@ -41,11 +41,11 @@ header("Context-type: application/json");
 if (empty($return["errors"])) {
     header("HTTP/1.0 200 OK");
 } else {
-    $module->emLog("Return: " . implode(',', $return));
-    $module->emLog("Return errors: " . implode(',', $return["errors"]));
-    $module->emLog("Return warnings: " . implode(',', $return["warnings"]));
-    $module->emLog("Return ids: " . implode(',', $return["ids"]));
-    $module->emLog("Return item_count: " . $return["item_count"]);
+    $module->emError("Return: " . implode(',', $return));
+    $module->emError("Return errors: " . implode(',', $return["errors"]));
+    $module->emError("Return warnings: " . implode(',', $return["warnings"]));
+    $module->emError("Return ids: " . implode(',', $return["ids"]));
+    $module->emError("Return item_count: " . $return["item_count"]);
     header("HTTP/1.0 500 Internal Server Error");
 }
 
