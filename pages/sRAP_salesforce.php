@@ -5,6 +5,7 @@ namespace Stanford\sRAP;
 use \REDCap;
 
 // This is storing data into pid=13941. (For testing it is pid 30 on Lee Ann's localhost).
+$module->emLog("Incoming request", printr($_POST, true));
 $pid = $module->getSystemSetting("redcap_pid");
 $saved_secret = $module->getSystemSetting("shared_secret");
 $sent_secret = isset($_POST['ss']) && !empty($_POST['ss']) ? $_POST['ss'] : null;
