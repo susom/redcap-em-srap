@@ -4,6 +4,12 @@ namespace Stanford\sRAP;
 
 use \REDCap;
 
+// In case the request didn't come over directly in the POST
+if (empty($_POST)) {
+    // Retrieve request from user
+    $_POST = json_decode(file_get_contents('php://input'), true);
+}
+
 // This is storing data into pid=13941. (For testing it is pid 30 on Lee Ann's localhost).
 $module->emLog("Incoming request", json_encode($_POST));
 $pid = $module->getSystemSetting("redcap_pid");

@@ -4,16 +4,11 @@ namespace Stanford\sRAP;
 
 use \REDCap;
 
-global $pid, $user, $message;
-$pid = "27";
-$user="yasukawa";
-//$user = USERID;
-
-//define('PROJECT_ID', $pid);
+global $user, $message;
+$user = USERID;
 
 require_once ($module->getModulePath() . "pages/sRAP_header_classes.php");
 require_once ($module->getModulePath() . "classes/sRAP_instances.php");
-
 
 ?>
 

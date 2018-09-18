@@ -4,6 +4,7 @@ namespace Stanford\sRAP;
 
 use \REDCap;
 
+$pid = $module->getSystemSetting("portal_pid");
 require_once ($module->getModulePath() . "classes/sRAP_utilities.php");
 
 
@@ -29,7 +30,6 @@ function getResearchProjects($proj_list) {
 
     $existingUser = (sizeof($results) > 0 ? true: false);
 
-    //$html .= '<a class="dropdown-item" href="' . $module->getURL("pages/NewProjectWizard.php") . "&record_id=null" . '">New Research Project</a>';
     foreach ($results as $ppi) {
         if ($ppi->rp_type == "1") {
             $html .= '<a class="dropdown-item" href="' . $module->getURL("pages/sRAP_projects.php") . "&record_id=" . $ppi->id . '">[IRB ' . $ppi->rp_irb_number . "] " . $ppi->rp_name_short .'</a>';

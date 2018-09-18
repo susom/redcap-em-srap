@@ -5,7 +5,8 @@ namespace Stanford\sRAP;
 use \REDCap;
 
 global $pid, $user, $message;
-$pid = "27";
+$pid = $module->getSystemSetting("portal_pid");
+//$user = USERID;
 $user = "yasukawa";
 
 require_once ($module->getModulePath() . "pages/sRAP_header_classes.php");

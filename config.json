@@ -41,19 +41,31 @@
         "name": "API Endpoint for Salesforce updates",
         "icon": "gear",
         "url": "pages/sRAP_salesforce.php?NOAUTH"
+      },
+      {
+        "name": "",
+        "icon": "gear",
+        "url": "pages/index.php?NOAUTH"
       }
     ]
   },
 
   "no-auth-pages": [
     "sRAP",
-    "pages/sRAP_salesforce"
+    "pages/sRAP_salesforce",
+    "pages/index"
   ],
 
   "system-settings": [
     {
       "key": "redcap_pid",
       "name": "<b>REDCap Project ID storing Help information</b>",
+      "required": true,
+      "type": "project-id"
+    },
+    {
+      "key": "portal_pid",
+      "name": "<b>REDCap Project Portal PID</b>",
       "required": true,
       "type": "project-id"
     },

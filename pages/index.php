@@ -6,13 +6,11 @@ use \REDCap;
 
 global $pid, $user;
 
-$pid = "27";
-//$user = USERID;
-$user = 'yasukawa';
+$user = USERID;
 $pi_projects = null;
 
-//define('PROJECT_ID', $pid);
-
+$pid = $module->getSystemSetting("portal_pid");
+DEFINE(PROJECT_PID, $pid);
 require_once ($module->getModulePath() . "pages/sRAP_header_classes.php");
 require_once ($module->getModulePath() . "classes/sRAP_utilities.php");
 
