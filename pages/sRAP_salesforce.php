@@ -27,6 +27,7 @@ $request_id = isset($_POST['record_id']) && !empty($_POST['record_id']) ? $_POST
 $case_create_date = isset($_POST['created_on']) && !empty($_POST['created_on']) ? $_POST['created_on'] : null;
 $case_num = isset($_POST['case_number']) && !empty($_POST['case_number']) ? $_POST['case_number'] : null;
 $case_status = isset($_POST['status']) && !empty($_POST['status']) ? $_POST['status'] : null;
+$case_org = isset($_POST['org']) && !empty($_POST['org']) ? $_POST['org'] : null;
 $case_owner = isset($_POST['owner']) && !empty($_POST['owner']) ? $_POST['owner'] : null;
 $case_last_update = isset($_POST['last_updated_on']) && !empty($_POST['last_updated_on']) ? $_POST['last_updated_on'] : null;
 
@@ -36,6 +37,7 @@ $data = array(
     'sf_case_number'            => $case_num,
     'sf_case_status'            => $case_status,
     'sf_case_owner'             => $case_owner,
+    'sf_case_org'               => $case_org,
     'sf_case_last_updated_on'   => $case_last_update,
     'salesforce_case_complete'  => 2
 );
