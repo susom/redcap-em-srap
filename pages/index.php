@@ -3,21 +3,31 @@ namespace Stanford\sRAP;
 /** @var \Stanford\sRAP\sRAP $module */
 
 use \REDCap;
+use \ExternalModules;
 
-global $pid, $user;
+require_once ($module->getModulePath() . "pages/sRAP_setup.php");
+require_once ($module->getModulePath() . "pages/sRAP_header_classes.php");
+require_once ($module->getModulePath() . "classes/sRAP_utilities.php");
+
+global $pid, $user, $user_instrument;
 
 $user = USERID;
 $pi_projects = null;
 
 $pid = $module->getSystemSetting("portal_pid");
 DEFINE(PROJECT_PID, $pid);
-require_once ($module->getModulePath() . "pages/sRAP_header_classes.php");
-require_once ($module->getModulePath() . "classes/sRAP_utilities.php");
 
 $action = isset($_POST['action']) && !empty($_POST['action']) ? $_POST['action'] : null;
 if ($action == 'pi_projects') {
     $pi_sunetid = isset($_POST['pi_sunetid']) && !empty($_POST['pi_sunetid']) ? $_POST['pi_sunetid'] : null;
     $pi_projects = null;
+    $pi_last_name = null;
+    $project_data = array();
+    $spl = ExternalModules\ExternalModules::getModuleInstance('redcap-em-stanford-person-lookup');
+    $spl_results = $spl->personLookup($pi_sunetid);
+    if ($spl_results["success"] == true) {
+        $pi_last_name = $spl_results["user"]["last_name"];
+    }
 
     if ($action == 'pi_projects') {
         // Look for portal projects that are already created for this PI
@@ -27,20 +37,42 @@ if ($action == 'pi_projects') {
 
         // If the PI has some portal projects already, display them
         if (!empty($proj_list)) {
-            $list = getDisplayData($pid, $proj_list, $display_fields);
-            $proj = json_decode($list, true);
-
+            $proj = get_Projects($pid, $proj_list, $display_fields);
+/*
             if ($list <> false) {
                 $pi_projects .= '<div id="pi_portal_proj">';
-                $pi_projects .= '<h4>Please select the project you wish to join:</h4><br>';
-                $pi_projects .= '<h6>Research Portal Projects for ' . $pi_sunetid . ':</h6>';
-                $pi_projects .= '<select id="pi_projects" onchange="selectedPortalProject(value)">';
-                $pi_projects .= '<option value="">-- select one --</option>';
+                $pi_projects .= '<h4>Select the project you wish to join:</h4><br>';
+                $pi_projects .= '<h6>Here is a list of the current research projects for ' . $pi_sunetid . ':</h6>';
+                $pi_projects .= '<div class="dropright">';
+                $pi_projects .= '<button class="btn dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">';
+                $pi_projects .= 'Research Projects';
+                $pi_projects .= '</button>';
+                $pi_projects .= '<div class="dropdown-menu" id="pi_projects" aria-labelledby="dropdownMenuButton">';
                 foreach ($proj as $key => $value) {
-                    $pi_projects .= '<option value="' . $value["id"] . '">' . $value["rp_name_short"] . '</option>';
+                    $pi_projects .= '<a class="dropdown-item" value="' . $value["id"] . '">' . $value["rp_name_short"] . '</a>';
                 }
-                $pi_projects .= '<option value="None">None of the above</option>';
-                $pi_projects .= '</select></div><br>';
+                $pi_projects .= '<div class="dropdown-divider"></div>';
+                $pi_projects .= '<a class="dropdown-item" value="None">NONE OF THE ABOVE</a>';
+                $pi_projects .= '</div><div id="pi_project_selection"></div></div><br>';
+                $module->emLog("This is the html for portal projects: ", $pi_projects);
+            }
+*/
+            if ($proj <> false) {
+                $pi_projects .= '<br><div id="pi_portal_proj">';
+                $pi_projects .= '<h4>Select the project you wish to join:</h4>';
+                if (is_null($pi_last_name)) {
+                    $pi_projects .= '<h6>Here is a list of the current research projects for ' . $pi_sunetid . ':</h6>';
+                } else {
+                    $pi_projects .= '<h6>Dr ' . $pi_last_name . ' already has the following registered projects. Is your project one of these?</h6>';
+                }
+                $pi_projects .= '<select class="custom-select" id="pi_projects" onchange="selectedPortalProject(value)">';
+                $pi_projects .= '<option value="" hidden>Please select one ...</option>';
+                foreach ($proj as $key => $value) {
+                    $pi_projects .= '<option class="custom-select" value="' . $value["id"] . '">' . $value["rp_name_short"] . '</option>';
+                }
+                $pi_projects .= '<option class="custom-select" disabled="disabled">───────────────────</option>';
+                $pi_projects .= '<option class="custom-select" value="None">NONE OF THE ABOVE</option>';
+                $pi_projects .= '</select><div id="pi_project_selection"></div></div><br>';
             }
         }
 
@@ -49,21 +81,27 @@ if ($action == 'pi_projects') {
 
         // Retrieve IRB numbers that this user is associated with that does not currently have a research project associated with it.
         $protocols = get_IRBBySunetID($pi_sunetid);
+        $module->emLog("Protocols: " . json_encode($protocols));
 
         // If PI has valid IRBs, display them but keep them hidden for now
         if (!empty($protocols)) {
-            $pi_projects .= '<div id="pi_irb_proj">';
+            $pi_projects .= '<br><div id="pi_irb_proj">';
             if (!empty($proj_list)) {
-                $pi_projects .= '<h5>Is your project related to an IRB?</h5><br>';
+                $pi_projects .= '<h4>Is your project related to an IRB?</h4>';
             }
-            $pi_projects .= '<h6>IRBs for ' . $pi_sunetid . ':</h6>';
-            $pi_projects .= '<select id="pi_irbs" onchange="selectedIRBProject(value)">';
-            $pi_projects .= '<option value="">-- select one --</option>';
+            if (is_null($pi_last_name)) {
+                $pi_projects .= '<h6>IRBs for ' . $pi_sunetid . ':</h6>';
+            } else {
+                $pi_projects .= '<h6>Dr ' . $pi_last_name . ' has the following IRBs. Is your project one of these?</h6>';
+            }
+            $pi_projects .= '<select class="custom-select" id="pi_irbs" onchange="selectedIRBProject(value)">';
+            $pi_projects .= '<option value="" hidden>Please select one ...</option>';
             foreach ($protocols as $key => $value) {
-                $pi_projects .= '<option value="IRB' . $value["protocolNumber"] . '">' . $value["protocolTitle"] . '</option>';
+                $pi_projects .= '<option class="custom-select" value="' . $value["protocolNumber"] . '">' . $value["protocolTitle"] . '</option>';
             }
-            $pi_projects .= '<option value="None">None of the above</option>';
-            $pi_projects .= '</select></div><br><br>';
+            $pi_projects .= '<option class="custom-select" disabled="disabled">───────────────────</option>';
+            $pi_projects .= '<option value="None">NONE OF THE ABOVE</option>';
+            $pi_projects .= '</select></div><div id="irb_project_selection"></div><br>';
         }
 
         // PI does not have portal projects or IRBs yet. Just display a message so user knows
@@ -72,84 +110,110 @@ if ($action == 'pi_projects') {
         } else {
             $pi_projects .= '<div id="no_pi_proj">Please continue to create a new project.</div>';
             $pi_projects .= '<div id="join_pi_proj">Please continue to join the project.</div>';
-            $pi_projects .= '<div id="irb_pi_proj">Please continue to create a new project from this IRB.</div>';
+            $pi_projects .= '<div id="irb_pi_proj">Please continue to create a new project from this IRB.</div><br><br>';
         }
 
         print $pi_projects;
         return;
     }
 
-} else if ($action == 'process') {
-    $module->emLog("In process");
-    $instrument = 'users';
+} else if ($action == 'process_request') {
+    $proj_record_id = "";
+    $instance_id = null;
 
+    $module->emLog("POST: ", $_POST);
     $pi_sunetid = isset($_POST['pi_sunetid']) && !empty($_POST['pi_sunetid']) ? $_POST['pi_sunetid'] : null;
-    $p_desc = isset($_POST['p_desc']) && !empty($_POST['p_desc']) ? $_POST['p_desc'] : null;
-    $irb_num = isset($_POST['irb_num']) && !empty($_POST['irb_num']) ? $_POST['irb_num'] : null;
-    $pi_proj = isset($_POST['pi_proj']) && !empty($_POST['pi_proj']) ? $_POST['pi_proj'] : null;
-    $pi_irb = isset($_POST['pi_irb']) && !empty($_POST['pi_irb']) ? $_POST['pi_irb'] : null;
-    $u_role = isset($_POST['u_role']) && !empty($_POST['u_role']) ? $_POST['u_role'] : null;
+    $p_desc = isset($_POST['proj_description']) && !empty($_POST['proj_description']) ? $_POST['proj_description'] : null;
+    $pi_proj = isset($_POST['portal_proj']) && !empty($_POST['portal_proj']) ? $_POST['portal_proj'] : null;
+    $irb_proj = isset($_POST['irb_proj']) && !empty($_POST['irb_proj']) ? $_POST['irb_proj'] : null;
+    $user_role_names = isset($_POST['user_role_names']) && !empty($_POST['user_role_names']) ? $_POST['user_role_names'] : null;
+    $user_role_values = isset($_POST['user_role_values']) && !empty($_POST['user_role_values']) ? $_POST['user_role_values'] : null;
 
-    // Get LDAP info for user
-    $ldap_user = file_get_contents('http://med.stanford.edu/webtools-dev/stanford_ldap/ldap_lookup.php?token=pXJ5xNwj1P&exact=true&only=displayname,mail,department,suaffiliation,ou,telephonenumber&userid=' . $user);
-    $ldap_user_result = json_decode($ldap_user);
-
-    // If the user is not the PI, get info for both
-    if ($user <> $pi_sunetid) {
-        $ldap_pi = file_get_contents('http://med.stanford.edu/webtools-dev/stanford_ldap/ldap_lookup.php?token=pXJ5xNwj1P&exact=true&only=displayname,mail,department,suaffiliation,ou,telephonenumber&userid=' . $pi_sunetid);
-        $ldap_pi_result = json_decode($ldap_pi);
+    // Convert user roles to correct format to save. i.e. "u_role" => [0,1,0,0]
+    $user_roles = array();
+    for ($i = 0; $i < count($user_role_names); $i++) {
+        if ($user_role_values[$i] == 'true') {
+            $user_roles[$i] = "1";
+        } else {
+            $user_roles[$i] = "0";
+        }
     }
 
-    // Put together all the data and create a new record
-    if (!is_null($pi_proj) and !empty($pi_proj)) {
-        $module->emLog("In create_record - have pi proj");
-        // If we have a project already, use add a user
-        $data = array("id" => $pi_proj,
-            "u_firstname" => $ldap_user_result["first_name"],
-            "u_lastname" => $ldap_user_result["last_name"],
-            "u_sunet" => $user,
-            "u_role" => $u_role,
-            "u_email" => $u_email,
-            "u_phone" => $u_phone,
-            "u_status" => 1,
-            //"u_permissions"             =>,
-            "users_complete" => 1
-        );
+    // See if we are adding user to an existing project
+    if ($pi_proj <> "None" && !is_null($pi_proj)) {
+        $data = retrieveUserInfo($user);
+        $module->emLog("Data to save: ", $data);
+        $data = array_merge($data, array("u_role" => $user_roles, $user_instrument . '_complete' => 2));
+        $module->emLog("After merge: ", $data);
+        saveRepeatingForm($pi_proj, $user_instrument, $instance_id, $data);
+        $module->emLog("After saving new user");
+        $proj_record_id = $pi_proj;
+    } else {
+        // Get SPL info for PI
+        $project_data = array();
+        $spl = ExternalModules\ExternalModules::getModuleInstance('redcap-em-stanford-person-lookup');
+        $spl_results = $spl->personLookup($pi_sunetid);
 
-        // Now save user provisionally
-        $user = new sRAP_Instances($pid, $instrument);
-        $instance_id = $user->getNextInstanceId($pi_proj);
-        $user->saveInstance($pi_proj, $data, $instance_id);
+        if ($spl_results["success"] == true) {
+            $project_data = array("rp_pi_firstname" => $spl_results["user"]["first_name"],
+                                "rp_pi_lastname" => $spl_results["user"]["last_name"],
+                                "rp_pi_email" => $spl_results["user"]["email"],
+                                //"rp_pi_phone" => $spl_results["user"]["telephonenumber"],
+                                "rp_pi_sunetid" => $spl_results["user"]["sunet"],
+                                "rp_pi_affliation" => $spl_results["user"]["affiliation"],
+                                "rp_pi_department" => $spl_results["user"]["department"]);
+        } else {
+            $module->emError("Could not retrieve person-lookup information for PI $pi_sunetid");
+            $project_data = array("rp_pi_sunetid" => $pi_sunetid);
+        }
 
-    } else if ((!is_null($irb_num) and !empty($irb_num)) or (!is_null($pi_irb) and !empty($pi_irb))) {
-        $module->emLog("In create_record - have IRB Num");
-        // If we have an IRB number, we need the PI on the IRB
+        // If this project is associated with an IRB, add in the IRB number and description from the IRB
+        $irb_data = array();
+        if ($irb_proj <> "None" && !is_null($irb_proj)) {
+            // Retrieve IRB information
+            $protocols = get_IRBByIRBNum($irb_proj);
+            if ($protocols["isPresent"] && $protocols["isValid"]) {
+                $irb_data = array("rp_irb_number" => $irb_proj,
+                                  "rp_name_short" => $protocols["protocolTitle"],
+                                  "rp_irb_status" => 2 );           // Approved
+            } else if ($protocols["isPresent"]) {
+                $irb_data = array("rp_irb_number" => $irb_proj,
+                                  "rp_name_short" => $protocols["protocolTitle"],
+                                  "rp_irb_status" => 1 );           // Applied but not Approved
+            } else {
+                $irb_data = array("rp_irb_number" => $irb_proj,
+                                  "rp_name_short" => $p_desc,
+                                  "rp_irb_status" => 99 );           // Unknown
+            }
+        } else {
+            $irb_data = array("rp_name_short" => $p_desc,
+                              "rp_irb_status" => 99 );              // Unknown
+        }
+        $project_data = array_merge($project_data, $irb_data);
 
-        $next_id = getNextId($pid, 'id', null, '');
-        $data = array("id" => $next_id,
-            "id_complete" => 2,
-            "rp_name_short" => $p_desc,
-            "rp_type" => 1,  // IRB required
-            "rp_irb_number" => $irb_num,
-            //"rp_pi_first_name"          =>,
-            //"rp_pi_last_name"           =>,
-            //"rp_pi_email"               =>,
-            //"rp_pi_phone"               =>,
-            //"rp_pi_sunetid"             =>,
-            //"rp_pi_affliation"          =>,
-            //"rp_pi_department"          =>,
-            "research_project_complete" => 1
-        );
-        $pi_proj = REDCap::saveData($pid, 'json', json_encode($data));
+        // Create a new project and new user with the information above.
+        $proj_record_id = getNextId($pid, "id");
+        $record_info = array("id" => $proj_record_id,
+                             "research_project_complete" => 1,  // Unverified
+                             "id_complete" => 2);               // Complete
+        $project_data = array_merge($record_info, $project_data);
 
-        // Now save user provisionally
-        $user = new sRAP_Instances($pid, $instrument);
-        $instance_id = $user->getNextInstanceId($pi_proj);
-        $user->saveInstance($pi_proj, $data, $instance_id);
+        // Save a new record with this project info
+        $results = REDCap::saveData($pid, 'json', json_encode(array($project_data)));
+        if (isset($results["errors"]) and !empty($results["errors"])) {
+            $module->emError("Error saving  new project: ", $results);
+        } else {
+            // Project was successfully created. Now add a user record.
+            $data = retrieveUserInfo($user);
+            $module->emLog("Data to save: ", $data);
+            $data = array_merge($data, array("u_role" => $user_roles, $user_instrument . '_complete' => 2));
+            $module->emLog("After merge: ", $data);
+            //$return = saveRepeatingForm($proj_record_id, $user_instrument, $instance_id, $data);
+            //$module->emLog("Return from saveRepeatingForm $return");
+        }
     }
 
-    $project_page_url = $module->getUrl('pages/sRAP_projects.php') . "&record_id=" . $pi_proj;
-    $module->emLog("URL in create record: " . $project_page_url);
+    $project_page_url = $module->getUrl('pages/sRAP_projects.php') . "&record_id=" . $proj_record_id;
     print $project_page_url;
     return;
 }
@@ -183,8 +247,9 @@ function getUser() {
 <?php echo getPageHeader(); ?>
 
 <div id="background" class="background">
-    <div class="container" width="50%" id="index_container">
-        <form id="ResearchProject" submit="">
+    <div class="container" width="60%" id="index_container">
+        <form id="ResearchProject">
+
             <!-- One "tab" for each step in the form: -->
             <div class="tab" id="tab0">
                 <h5>Welcome to the new Research Portal!</h5>
@@ -203,32 +268,44 @@ function getUser() {
             </div>
             <div class="tab" id="tab1">
                 <div>
-                    <h5>Please help us determine if a portal project has already been created for your project: </h5>
+                    <h5>Please help us determine if your research project is already registered: </h5>
                 </div>
+                <br>
+
                 <div id="pi_info">
                     <p>
-                       <a><b>Principal Investigator's sunetID whose project you will be working on:</b></a>
-                       <input placeholder="PI's sunetID..." name="pi_sunetid" id="pi_sunetid">
+                        <label for="pi_sunetid"><b>Principal Investigator's sunetID whose project you will be working on:</b></label>
+                        <input type="text" class="form-control" size="40%" name="pi_sunetid" id="pi_sunetid" placeholder="PI's sunetID..." required>
+                        <div class="invalid-feedback">
+                            * The PI sunetID is required.
+                        </div>
+                    </p>
+                   <p>
+                        <a><b>Enter a project title</b> (max. 70 characters)</a>
+                        <input type="text" class="form-control" size="40%" maxlength="70" name="proj_desc" id="proj_desc" placeholder="Project Title ..." required>
+                        <div class="invalid-feedback">
+                            * A project title is required.
+                        </div>
                     </p>
                     <p>
-                       <a><b>Enter a short description of the project</b></a>
-                       <input placeholder="Project Description..." size="50%" name="proj_desc" id="proj_desc"><br><br>
-                   </p>
-                    <p>
-                       <input type="checkbox" id="pi_attest" value="checked">
-                       <a><b>I attest that I am working with this Principal Investigator.</b></a><br>
-                       <a><i>  (The PI will be notified of this attestation)</i></a>
-                   </p>
-                   <p id="no_pi_sunetid">
-                       **<a id="alert">You cannot continue until you enter a sunetID for the Principal Investigator.</a>
-                   </p><br>
+                        <input type="checkbox" id="pi_attest" value="checked" required>
+                        <a><b>I attest that I am working with this Principal Investigator.</b></a><br>
+                        <a><i>  (Please Note: The PI is able to view all users who agree to this attestation)</i></a>
+                        <div class="invalid-feedback">
+                            * Agreeing to this attestation is required to continue.
+                        </div>
+                    </p>
+                    <p id="no_pi_sunetid">
+                        **<a id="alert">You cannot continue until you enter a sunetID for the Principal Investigator.</a>
+                    </p><br>
                     <p id="no_proj_description">
                         **<a id="alert">You cannot continue until you enter a project description.</a>
                     </p><br>
                     <p id="no_attestation">
                         **<a id="alert">You cannot continue until you agree to the attestation above.</a>
                     </p>
-                </div>
+                    <br><br>
+                 </div>
             </div> <!-- tab1 -->
 
             <div class="tab" id="tab2">
@@ -236,17 +313,15 @@ function getUser() {
                 <div id="pi_proj">
                 </div>
             </div>  <!-- tab 2 -->
-
             <div class="tab" id="tab3">
                 <h5 id="description2"></h5>
                 <input type = "text" name="user" id="user" value="<?php echo getUser()?>" hidden>
                 <p>
-                    <a ><b> What is your role(s) in this project </b ></a ><br>
-                    <input type = "checkbox" name = "pi" id = "pi" value = "pi" > Principal Investigator </input ><br >
-                    <input type = "checkbox" name = "finance" id = "finance" value = "finance" > Financial Staff </input ><br >
-                    <input type = "checkbox" name = "research" id = "research" value = "research" > Research Staff </input ><br >
+                    <br><a ><b> What is your role(s) in this project </b ></a ><br>
+                    <?php echo getSelectOptions("u_role"); ?>
                </p>
-            </div>
+            </div> <!-- tab 3 -->
+
             <br>
             <div style="overflow:auto;">
                 <div style="float:right;">
@@ -265,6 +340,9 @@ function getUser() {
     </div>   <!-- End container -->
 </div> <!-- End background -->
 
+</body>
+</html>
+
 <script>
     var currentTab = 0; // Current tab is set to be the first tab (0)
     showTab(currentTab); // Display the current tab
@@ -272,7 +350,13 @@ function getUser() {
     document.getElementById("no_pi_sunetid").style.display = "none";
     document.getElementById("no_proj_description").style.display = "none";
 
+
+    $(document).ready(function(){
+        $('[data-toggle="popover"]').popover();
+    });
+
     function selectedPortalProject(selection) {
+
         // If 'None of the above' is selected, unhide the IRB list if there is one.
         // If No IRB list, unhide the message which tells the user we will create a new portal project.
         document.getElementById("join_pi_proj").style.display = "none";
@@ -308,7 +392,7 @@ function getUser() {
     function showTab(n) {
         // This function will display the specified tab of the form...
         var x = document.getElementsByClassName("tab");
-        x[n].style.display = "block";
+        x[n].style.display = "inline-block";
         //... and fix the Previous/Next buttons:
         if (n == 0) {
             document.getElementById("prevBtn").style.display = "none";
@@ -339,16 +423,16 @@ function getUser() {
             document.getElementById("description1").innerHTML = proj_description;
             document.getElementById("description2").innerHTML = proj_description;
 
-            // If this is the PI, check the PI on the roles page
+            // If the user is also the PI, select the PI checkbox
             if (user == pi_sunetid) {
-                document.getElementById("pi").checked = true;
-            } else {
-                document.getElementById("pi").checked = false;
+                document.getElementById("u_role___0").checked = true;
             }
 
             // Make sure each of the fields has a reasonable value before proceeding
             if ((pi_sunetid.length < 2) || (proj_description.length < 2) || (attest == false)) {
-                n = currentTab - n;
+                if (n > 0) {
+                    currentTab = currentTab - n;
+                }
                 if (pi_sunetid.length < 2) {
                     document.getElementById("no_pi_sunetid").style.display = "inline";
                 }
@@ -371,10 +455,10 @@ function getUser() {
         if (currentTab >= x.length) {
             // ... the form gets submitted:
             srap.processRequest();
+        } else {
+            // Otherwise, display the correct tab:
+            showTab(currentTab);
         }
-
-        // Otherwise, display the correct tab:
-        showTab(currentTab);
     }
 
     function fixStepIndicator(n) {
@@ -433,27 +517,40 @@ function getUser() {
 
     srap.processRequest = function ()
     {
+        var portal_project = null;
+        var irb_project = null;
+        if (document.getElementById("pi_projects")) {
+            portal_project = document.getElementById("pi_projects").value;
+        }
+        if (document.getElementById("pi_irbs")) {
+            irb_project = document.getElementById("pi_irbs").value;
+        }
+        var user_roles = Array.from(document.querySelectorAll('[id^=u_role]'));
+        var user_role_names = [];
+        var user_role_values = [];
+        for (var i = 0; i < user_roles.length; i++) {
+            user_role_names[i] = user_roles[i].name;
+            user_role_values[i] = user_roles[i].checked;
+        }
+
         // Load PI Info and go look for projects
         $.ajax({
             type: "POST",
             datatype: "html",
-            async: false,
+            async: true,
             data: {
-                "action": "create_record",
-                "pi_first": pi_first,
-                "pi_last" : pi_last,
-                "p_desc"  : p_desc,
-                "irb_num" : irb_num,
-                "pi_proj" : pi_proj,
-                "pi_irb"  : pi_irb,
-                "u_role"  : u_role,
-                "u_email" : u_email,
-                "u_phone" : u_phone
+                "action": "process_request",
+                "pi_sunetid": document.getElementById("pi_sunetid").value,
+                "proj_description": document.getElementById("proj_desc").value,
+                "portal_proj": portal_project,
+                "irb_proj": irb_project,
+                "user_role_names": user_role_names,
+                "user_role_values": user_role_values
             },
             success:function(html) {
             },
             error:function(jqXhr, textStatus, errorThrown) {
-                console.log("Error in getIRBsProjects: ", jqXHR, textStatus, errorThrown);
+                console.log("Error in request to add user to research project: ", jqXHR, textStatus, errorThrown);
             }
 
         }).done(function (html) {
@@ -461,13 +558,10 @@ function getUser() {
                 window.location = html;
             }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-            console.log("Failed in getIRBsProjects for PI " + pi_first + ' ' + pi_last);
+            console.log("Failed to process request for Research Project");
         });
 
     }
 
 </script>
-
-</body>
-</html>
 

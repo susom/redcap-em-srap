@@ -4,19 +4,12 @@ namespace Stanford\sRAP;
 
 use \REDCap;
 
-$pid = $module->getSystemSetting("portal_pid");
 require_once ($module->getModulePath() . "classes/sRAP_utilities.php");
 
 
-function getMessage() {
-    global $message;
-
-    return $message;
-}
-
 function getResearchProjects($proj_list) {
 
-    global $pid, $module, $message, $existingUser;
+    global $pid, $existingUser, $module;
 
     $html = "";
     $research_display_fields = array("id", "rp_irb_number", "rp_type", "rp_name_short");
@@ -24,17 +17,17 @@ function getResearchProjects($proj_list) {
     $results = array();
     if (sizeof($proj_list) > 0) {
         // First see if there are projects where the pi is this person
-        $project_pi = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
-        $results = json_decode($project_pi);
+        $results = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
+        $projects = json_decode($results);
     }
 
     $existingUser = (sizeof($results) > 0 ? true: false);
 
-    foreach ($results as $ppi) {
-        if ($ppi->rp_type == "1") {
-            $html .= '<a class="dropdown-item" href="' . $module->getURL("pages/sRAP_projects.php") . "&record_id=" . $ppi->id . '">[IRB ' . $ppi->rp_irb_number . "] " . $ppi->rp_name_short .'</a>';
+    foreach ($projects as $project) {
+        if ($project->rp_type == "1") {
+            $html .= '<a class="dropdown-item" href="' . $module->getURL("pages/sRAP_projects.php") . "&record_id=" . $project->id . '">[IRB ' . $project->rp_irb_number . "] " . $project->rp_name_short .'</a>';
         } else {
-            $html .= '<a class="dropdown-item" href="' . $module->getURL("pages/sRAP_projects.php") . "&record_id=" . $ppi->id . '">' . $ppi->rp_name_short .'</a>';
+            $html .= '<a class="dropdown-item" href="' . $module->getURL("pages/sRAP_projects.php") . "&record_id=" . $project->id . '">' . $project->rp_name_short .'</a>';
         }
     }
 
@@ -49,13 +42,13 @@ function getRedcapProjects($proj_list) {
     $research_display_fields = array("id", "redcap_pid", "redcap_name");
 
     // First see if there are projects where the pi is this person
-    $project_pi = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
-    $results = json_decode($project_pi);
+    $results = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
+    $redcaps = json_decode($results);
 
     $html .= '<a class="dropdown-item" href="#">New Redcap Project</a>';
-    foreach ($results as $ppi) {
-        if (!is_null($ppi->redcap_pid) && !empty($ppi->redcap_pid)) {
-            $html .= '<a class="dropdown-item" href="#">[IRB ' . $ppi->redcap_pid . '] ' . $ppi->redcap_name .'</a>';
+    foreach ($redcaps as $redcap) {
+        if (!is_null($redcap->redcap_pid) && !empty($redcap->redcap_pid)) {
+            $html .= '<a class="dropdown-item" href="#">[IRB ' . $redcap->redcap_pid . '] ' . $redcap->redcap_name .'</a>';
         }
     }
 
@@ -70,13 +63,13 @@ function getRequests($proj_list) {
     $research_display_fields = array("id", "r_ticket_id", "r_description");
 
     // First see if there are projects where the pi is this person
-    $project_pi = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
-    $results = json_decode($project_pi);
+    $results = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
+    $requests = json_decode($results);
 
     $html .= '<a class="dropdown-item" href="#">New Requests</a>';
-    foreach ($results as $ppi) {
-        if (!is_null($ppi->r_ticket_id) && !empty($ppi->r_ticket_id)) {
-            $html .= '<a class="dropdown-item" href = "#" >[' . $ppi->r_ticket_id . '] ' . $ppi->r_description . "</a>";
+    foreach ($requests as $request) {
+        if (!is_null($request->r_ticket_id) && !empty($request->r_ticket_id)) {
+            $html .= '<a class="dropdown-item" href = "#" >[' . $request->r_ticket_id . '] ' . $request->r_description . "</a>";
         }
     }
 
@@ -91,11 +84,11 @@ function getUsers($proj_list) {
     $research_display_fields = array("u_sunet");
 
     // First see if there are projects where the pi is this person
-    $project_users = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
-    $results = json_decode($project_users);
+    $results = REDCap::getData($pid, "json", $proj_list, $research_display_fields);
+    $users = json_decode($results);
 
     $user_list = array();
-    foreach ($results as $user) {
+    foreach ($users as $user) {
         $user_list[] = $user->u_sunet;
     }
 
@@ -103,8 +96,8 @@ function getUsers($proj_list) {
     asort($unique_list);
 
     $html .= '<a class="dropdown-item" href="#">New User</a>';
-    foreach ($unique_list as $ppi) {
-        $html .= '<a class="dropdown-item" href="#" >' . $ppi . '</a>';
+    foreach ($unique_list as $user) {
+        $html .= '<a class="dropdown-item" href="#" >' . $user . '</a>';
     }
 
     return $html;

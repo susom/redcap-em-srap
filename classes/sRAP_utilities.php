@@ -3,10 +3,13 @@ namespace Stanford\sRAP;
 /** @var \Stanford\sRAP\sRAP $module */
 
 use \REDCap;
+use \ExternalModules;
+
+require_once ($module->getModulePath() . "pages/sRAP_setup.php");
 
 function filterProjects($pid, $requestor=null) {
 
-    global $message, $user, $module;
+    global $user;
     $id_fields = array("id");
 
     if (is_null($requestor) or empty($requestor)) {
@@ -35,70 +38,18 @@ function filterProjects($pid, $requestor=null) {
     return $proj_ids;
 }
 
-function getDisplayHeaders($pid, $instrument, $display_fields=null) {
-
-    $instruments = array("id", $instrument);
-
-    $ddictionary = REDCap::getDataDictionary($pid, "array", false, null, $instruments, false);
-
-    $header = array();
-    foreach ($display_fields as $field) {
-        $header[] = $ddictionary[$field]["field_label"];
-    }
-
-    return $header;
-}
-
-function getDisplayData($pid, $record_id, $display_fields) {
-
-    // Retrieve the data on this research project. Retrieving in
-    $data = REDCap::getData($pid, "json", $record_id, $display_fields, null, null, false, false, false, null, true);
-
-    return $data;
-}
-
-function getBadge($display_label, $size, $instrument, $record_id) {
+function getBadge($size) {
     // Create a badge with the size of the table
-    $html = '<button type="button" class="btn btn-lg btn-outline-dark" id="custom-badge" data-toggle="collapse" data-target="#' . $instrument .
-        '" aria-expanded="false" aria-controls="collapse' . $instrument . '">' .
-        $display_label . 's&nbsp;<span class="badge badge-light">' . $size . '</span></button>';
+    $html = '<span class="badge badge-secondary">' . $size . '</span>';
     return $html;
-
 }
 
-function get_Funding($pid, $record_id) {
-
-    $instrument = "funding_information";
-    $display_fields = array("id", "billing_ilab_service_id", "billing_first_name", "billing_last_name", "billing_email", "billing_pta", "billing_pta_date");
+function get_Projects($pid, $record_id, $project_display_fields) {
 
     // Retrieve the research project data
-    $data = REDCap::getData($pid, "json", $record_id, $display_fields, null, null, false, false, false, null, true);
-    if ($data <> false) {
-        $funding = json_decode($data, true);
-
-        $funding_html = '<div><h6><b>Funding</b><a data-record="' . $record_id . '" id="edit-style" data-value="grants" data-toggle="modal" data-target="#editFunding"><img src="' . APP_PATH_IMAGES . 'pencil_small3.png"/></a></h6></div>'
-            . '<div>PTA Number: ' . $funding[0]["billing_pta"] . '</div>'
-            . '<div>PTA Expiration Date: ' . $funding[0]["billing_pta_date"] . '</div>'
-            . '<div>PTA Contact: ' . $funding[0]["billing_first_name"] . ' ' . $funding[0]["billing_last_name"] . '</div>'
-            . '<div>Email: ' . $funding[0]["billing_email"] . '</div>'
-            . '<div>iLab Acct No: ' . $funding[0]["billing_ilab_service_id"] . '</div>';
-        return $funding_html;
-    } else {
-        return null;
-    }
-}
-
-
-function get_Projects($pid, $record_id) {
-
-    $instrument = "research_project";
-    $display_fields = array("id", "rp_name_short", "rp_type", "rp_irb_number", "rp_irb_status", "rp_funding_status",
-        "rp_start_date", "rp_end_date", "rp_pi_first_name", "rp_pi_last_name", "rp_pi_department");
-
-    // Retrieve the research project data
-    $data = REDCap::getData($pid, "json", $record_id, $display_fields, null, null, false, false, false, null, true);
+    $data = REDCap::getData($pid, "json", $record_id, $project_display_fields, null, null, false, false, false, null, true);
     if ($data == false) {
-        return data;
+        return $data;
     } else {
         return json_decode($data, true);
     }
@@ -106,99 +57,181 @@ function get_Projects($pid, $record_id) {
 
 function get_ProjectHeader($pid, $record_id) {
 
+    global $project_display_fields, $module;
+
     $html = null;
-    $funding_html = null;
+    $irb_column1 = null;
+    $irb_column2 = null;
 
     // Get Project data to display
-    $project_data = get_Projects($pid, $record_id);
-    if ($project_data <> false) {
-        // Decide what to display about the IRB depending on status
-        if ($project_data[0]["rp_type"] == 'IRB required') {
-            $irb_display = '<div>IRB Number: ' . $project_data[0]["rp_irb_number"] . '</div>
-                            <div>IRB Status: ' . $project_data[0]["rp_irb_status"] . '</div>';
-        } else {
-            $irb_display = "<div>IRB Not Required</div>";
-        }
+    $project_data = get_Projects($pid, $record_id, $project_display_fields);
+
+    $html .= '<br><div class="container">';
+    $html .= '<table class="table table-sm" cellspacing="2" width="100%">';
+    $html .= '<tr colspan="4"><h5>'. $project_data[0]["rp_name_short"] . '';
+    $html .= '<a class="btn-sm" data-toggle="modal" data-target="#editProject" data-record="'. $record_id . '">';
+    $html .= '<i class="far fa-edit"></i>';
+    $html .= '</a></h5></i>';
+    $html .= '</tr>';
+
+    if (isset($project_data[0]["rp_description"])) {
+        $html .= '<tr><td colspan="4"><b>Project Description: </b>' . $project_data[0]["rp_description"] . '</td></tr>';
     }
 
-    // Get project general information
-    $html .= '<br><div></div><h5>' . $project_data[0]["rp_name_short"] . '</h5></div><br>'
-            . '<div class="row"><div class="col-sm-6">'
-            . '<h6><b>Project Information</b><a data-record="' . $record_id . '" id="edit-style" data-value="grants" data-toggle="modal" data-target="#editProject"><img src="' . APP_PATH_IMAGES . 'pencil_small3.png"/></a></h6>'
-            . '<div>Principal Investigator: ' . $project_data[0]["rp_pi_first_name"] . ' ' . $project_data[0]["rp_pi_last_name"] . '</div>'
-            . '<div>Department: ' . $project_data[0]["rp_pi_department"] . '</div>'
-            . $irb_display
-            . '<div>Start Date: ' . $project_data[0]["rp_start_date"] . '- End Date: ' . $project_data[0]["rp_end_date"] . '</div>'
-            . '</div><div class="col-sm-6">'
-            . $funding_html
-            . '</div></div>'
-        ;
+    // Setup each row
+    $html .= '<tr>';
+    $html .= '<td class="col-md-auto"><b>Principal Investigator</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_pi_firstname"]) ? '&nbsp;' : $project_data[0]["rp_pi_firstname"]) .
+             ' ' . (empty($project_data[0]["rp_pi_lastname"]) ? '&nbsp;' : $project_data[0]["rp_pi_lastname"]) . '</td>';
+    $html .= '<td class="col-md-auto"><b>Funding Status</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_funding_status"]) ? '&nbsp;' : $project_data[0]["rp_funding_status"]) . '</td>';
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="col-md-auto"><b>Email</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_pi_email"]) ? '&nbsp;' :  $project_data[0]["rp_pi_email"]) . '</td>';
+    $html .= '<td class="col-md-auto"><b>Estimated Start Date</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_start_date"]) ? '&nbsp;' : $project_data[0]["rp_start_date"]) . '</td>';
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="col-md-auto"><b>Phone</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_pi_phone"]) ? '&nbsp;' : $project_data[0]["rp_pi_phone"]) . '</td>';
+    $html .= '<td class="col-md-auto"><b>Estimated End Date</td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_end_date"]) ? '&nbsp;' : $project_data[0]["rp_end_date"]) . '</td>';
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="col-md-auto"><b>Department</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_pi_department"]) ? '&nbsp;' : $project_data[0]["rp_pi_department"]) . '</td>';
+    if ($project_data[0]["rp_type"] == 'IRB required') {
+        $html .= '<td class="col-md-auto"><b>IRB Number</b></td>';
+        $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_irb_number"]) ? '&nbsp;' : $project_data[0]["rp_irb_number"]) . '</td>';
+    } else if ($project_data[0]["rp_type"] == 'IRB NOT required') {
+        $html .= '<td class="col-md-auto"><b>IRB Not Required</b></td>';
+    }
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="col-md-auto"><b>Sunet ID</b></td>';
+    $html .= '<td class="col-md-auto">'. (empty($project_data[0]["rp_pi_sunetid"]) ? '&nbsp;' : $project_data[0]["rp_pi_sunetid"]) . '</td>';
+    if ($project_data[0]["rp_type"] == 'IRB required') {
+        $html .= '<td class="col-md-auto"><b>IRB Status</b></td>';
+        $html .= '<td class="col-md-auto">' . (empty($project_data[0]["rp_irb_status"]) ? '&nbsp;' : $project_data[0]["rp_irb_status"]) . '</td>';
+    }
+    $html .= '</tr>';
+
+    $html .= '</table>';
+    $html .= '</div>';
 
     return $html;
+}
+
+function get_Funding($pid, $record_id) {
+
+    global $funding_instrument, $funding_display_fields;
+    $html = null;
+
+    // Create instrument class and retrieve the table headers on the research project
+    $proj_funding = new sRAP_instances($pid, $funding_instrument);
+    $header = $proj_funding->getDisplayHeaders($funding_display_fields);
+    $proj_funding->loadData($record_id);
+    $found_funding = $proj_funding->getAllInstancesFlat($record_id, $funding_display_fields);
+
+    // Create a badge that displays the number of funding instances
+    $badge = getBadge($found_funding["size"]);
+
+    // Get the data table of Users
+    $html .= $proj_funding->renderTable($header, $found_funding["data"], 'Funding Source');
+
+    return array("size" => $badge, "html" => $html);
 }
 
 function get_Users($pid, $record_id) {
 
+    global $user_instrument, $user_display_fields;
     $html = null;
-    $instrument = "users";
-    $display_fields = array("id", "u_firstname", "u_lastname", "u_role", "u_status");
 
     // Retrieve the table headers on the research project
-    $header = getDisplayHeaders($pid, $instrument, $display_fields);
+    $proj_user = new sRAP_instances($pid, $user_instrument);
+    $header = $proj_user->getDisplayHeaders($user_display_fields);
+    $proj_user->loadData($record_id);
+    $found_users = $proj_user->getAllInstancesFlat($record_id, $user_display_fields);
 
-    $user = new sRAP_Instances($pid, $instrument);
-    $user->loadData($record_id);
-    $return = $user->getAllInstancesFlat($record_id, $display_fields);
+    // Convert the u_role checkboxes and selections to readable labels
+    $data_with_labels = array();
+    foreach($found_users["data"] as $user) {
+        $user["u_role"] = $proj_user->getCheckboxesLabels("u_role", $user["u_role"]);
+        $user["u_status"] = $proj_user->getSelectionLabels("u_status", $user["u_status"]);
+        $data_with_labels[] = $user;
+    }
 
-    // Get the collapsed data table of Users
-    //if ($return["size"] <> 0) {
-        $dt = new displayTable();
-        $html .= $dt->renderTable($instrument, $header, $return["data"], $record_id);
-    //}
+    // Create a badge displaying the number of user records
+    $badge = getBadge($found_users["size"]);
+    $html .= $proj_user->renderTable($header, $data_with_labels, 'User');
 
-    return $html;
+    return array("size" => $badge, "html" => $html);
 }
 
 function get_REDCap($pid, $record_id) {
 
+    global $redcap_instrument, $redcap_display_fields;
+
     $html = null;
-    $instrument = "redcap_projects";
-    $display_fields = array("id", "redcap_pid", "redcap_name", "redcap_proj_status", "redcap_proj_create_date");
 
     // Retrieve the table headers on the research project
-    $header = getDisplayHeaders($pid, $instrument, $display_fields);
 
-    $projects = new sRAP_Instances($pid, $instrument);
+    $projects = new sRAP_instances($pid, $redcap_instrument);
+    $header = $projects->getDisplayHeaders($redcap_display_fields);
     $projects->loadData($record_id);
-    $return = $projects->getAllInstancesFlat($record_id, $display_fields);
+    $found_projects = $projects->getAllInstancesFlat($record_id, $redcap_display_fields);
 
-    if ($return["size"] <> 0) {
-        $dt = new displayTable();
-        $html .= $dt->renderTable($instrument, $header, $return["data"], $record_id);
+    // Redcap Projects are a little different.  We are looking up the project title and status
+    // from the entered pid.
+    $data = array();
+    foreach ($found_projects["data"] as $project) {
+        $record = array();
+        $sql = "SELECT app_title, status FROM redcap_projects where project_id = " . $project["redcap_pid"];
+        $q = db_query($sql);
+        $row = db_fetch_assoc($q);
+        if (!is_null($row)) {
+            $record['redcap_pid'] = $project["redcap_pid"];
+            $record['app_title'] = $row['app_title'];
+            $record['status'] = ($row['status'] == 0 ? 'Development' : 'Production');
+        } else {
+            $record['redcap_pid'] = $project["redcap_pid"] . ' - Unknown PID';
+            $record['app_title'] = null;
+            $record['status'] = null;
+        }
+        $record['id'] = $project['id'];
+        $data[] = $record;
     }
 
-    return $html;
+    $header = array_merge($header, array("app_title" => "Title", "status" => "Production Status"));
+
+    // Create a badge which displays the number of instances of redcap projects
+    $badge = getBadge($found_projects["size"]);
+    $html .= $projects->renderTable($header, $data, 'Redcap Project');
+
+    return array("size" => $badge, "html" => $html);
 }
 
 function get_Requests($pid, $record_id) {
 
+    global $request_instrument, $request_display_fields;
     $html = null;
-    $instrument = "requests";
-    $display_fields = array("id", "r_date", "r_requestor", "r_ticket_id", "r_description");
 
     // Retrieve the table headers on the research project
-    $header = getDisplayHeaders($pid, $instrument, $display_fields);
-
-    $request = new sRAP_Instances($pid, $instrument);
+    $request = new sRAP_instances($pid, $request_instrument);
+    $header = $request->getDisplayHeaders($request_display_fields);
     $request->loadData($record_id);
-    $return = $request->getAllInstancesFlat($record_id, $display_fields);
+    $found_requests = $request->getAllInstancesFlat($record_id, $request_display_fields);
 
-    if ($return["size"] <> 0) {
-        $dt = new displayTable();
-        $html .= $dt->renderTable($instrument, $header, $return["data"], $record_id);
-    }
+    // Create a badge that displays the number of instances of requests
+    $badge = getBadge($found_requests["size"]);
+    $html .= $request->renderTable($header, $found_requests["data"], 'Request');
 
-    return $html;
+    return array("size" => $badge, "html" => $html);
 }
 
 function get_IRBBySunetID($sunetid) {
@@ -236,4 +269,118 @@ function getNextId($pid, $id_field, $arm_event = NULL, $prefix = '') {
         }
         return $new_id;
     }
+}
+
+
+function getCurrentValue($field) {
+    global $pid, $record_id, $module;
+    if (isset($record_id) and !is_null($record_id)) {
+        $field_data = REDCap::getData($pid, 'json', $record_id, array($field));
+        //$module->emLog("This is the field $field for record $record_id and returned value: ", $field_data);
+    } else {
+        //$module->emLog("This is the field $field for null record");
+        return null;
+    }
+}
+
+
+function getSelectOptions($field, $current_value=null) {
+    global $pid, $popover_content;
+    $html = "";
+
+    // Retrieve the data dictionary for this field so we know the available options. This get retrieves the labels
+    $data_dict = REDCap::getDataDictionary($pid, 'array', true, $field);
+    $choices = array_map('trim', explode('|', $data_dict[$field]["select_choices_or_calculations"]));
+
+    // Create the html with these options and optionally select the one that is already selected
+    if (($data_dict[$field]['field_type'] == 'checkbox')  and ($field == "u_role")) {
+        foreach ($choices as $choice) {
+            $split_choice = array_map('trim', explode(',', $choice));
+            $html .= '<div class="custom-control custom-checkbox">';
+            $field_name = $field . '___' . $split_choice[0];
+            if (isset($current_value) and ($split_choice[1] == $current_value)) {
+               $html .= '<input type="checkbox" class="custom-control-input" name="' . $field_name . '" id="' . $field_name . ' checked>';
+            } else {
+                $html .= '<input type="checkbox" class="custom-control-input" name="' . $field_name . '" id="' . $field_name . '">';
+            }
+            $html .= '<label class="custom-control-label" for="' . $field_name . '"><a href="#" title="' . $split_choice[1] . '" data-toggle="popover" data-placement="top" data-content="' . $popover_content[$split_choice[0]] . '">' . $split_choice[1] . '</a></label><br>';
+            $html .= '</div>';
+
+        }
+    } else if (($data_dict[$field]['field_type'] == 'radio') or ($data_dict[$field]['field_type'] == 'dropdown')) {
+        if (is_null($current_value)) {
+            $html .= '<option value="" selected disabled>-- Select one ---</option>';
+        } else {
+            $html .= '<option value="" disabled>   --- Select one ---  </option>';
+        }
+        foreach ($choices as $choice) {
+            $split_choice = array_map('trim', explode(',', $choice));
+            if (isset($current_value) and ($split_choice[0] == $current_value)) {
+                $html .= '<option value="' . $split_choice[0] . '" selected>' . $split_choice[1] . '</option>';
+            } else {
+                $html .= '<option value="' . $split_choice[0] . '">' . $split_choice[1] . '</option>';
+            }
+        }
+    }
+
+    return $html;
+}
+
+function saveRepeatingForm($record_id1, $instrument1, $instance_id1, $data1)
+{
+    global $module;
+
+    $data = array();
+    $record_id = null;
+    $instrument = null;
+    $instance_id = null;
+    if ($instrument1 == 'users') {
+        $data = array("u_firstname" => "TestFirstName",
+                      "u_lastname"  => "TestLastName"
+                    );
+        $record_id = 11;
+        $instrument = 'users';
+        $instance_id = 4;
+        $pid = 27;
+    }
+    $module->emLog("For pid $pid instrument $instrument, instance_id $instance_id and record_id $record_id: data", $data);
+    $repeating_form = new sRAP_instances($pid, $instrument);
+    if (is_null($instance_id)) {
+        $instance_id = $repeating_form->getNextInstanceId($record_id);
+        $module->emLog("New instance id $instance_id");
+    }
+    $return = $repeating_form->saveInstance($record_id, $data, $instance_id);
+    $module->emLog("Return from saveInstance: " . $return);
+    if ($return == false) {
+        $module->emError("Error saving instrument $instrument, instance $instance_id for record $record_id", $repeating_form->last_error_message);
+    } else {
+        $module->emLog("Saved instrument $instrument in record $record_id and instance $instance_id", $data);
+    }
+}
+
+function retrieveUserInfo($new_sunetid) {
+
+    $user_data = array();
+    if (!is_null($new_sunetid)) {
+        // Call lookup for this user
+        $spl = ExternalModules\ExternalModules::getModuleInstance('redcap-em-stanford-person-lookup');
+        $spl_results = $spl->personLookup($new_sunetid);
+
+        // If Lookup was successful, save the data retrieved
+        if ($spl_results["success"] == true) {
+            $user_data = array("u_firstname" => $spl_results["user"]["first_name"],
+                "u_lastname" => $spl_results["user"]["last_name"],
+                "u_email" => $spl_results["user"]["email"],
+                //"rp_pi_phone"        => $spl_results["user"]["telephonenumber"],
+                "u_sunet" => $spl_results["user"]["sunet"],
+                "u_affiliation" => $spl_results["user"]["affiliation"],
+                "u_department" => $spl_results["user"]["department"]
+            );
+        } else {
+            // If the user was not found in lookup, just save the sunetID
+            $user_data = array("u_sunet" => $new_sunetid);
+        }
+    }
+
+    return $user_data;
 }

@@ -4,8 +4,10 @@ namespace Stanford\sRAP;
 
 use \REDCap;
 
-global $user, $message;
+global $user, $pid, $message;
 $user = USERID;
+$pid = $module->getSystemSetting("portal_pid");
+DEFINE(PROJECT_PID, $pid);
 
 require_once ($module->getModulePath() . "pages/sRAP_header_classes.php");
 require_once ($module->getModulePath() . "classes/sRAP_instances.php");
@@ -33,15 +35,12 @@ require_once ($module->getModulePath() . "classes/sRAP_instances.php");
 
 <!-- Top nav bar -->
 <?php echo getPageHeader(); ?>
-<!-- Debug statements   -->
-<?php echo getMessage(); ?>
-
 
 <div id="background" class="background">
         <div class="container">
             <div class="panel">
                 <div class="panel-heading">
-                    <h3>Frequently Asked Questions</h3>
+                    <br><h3>Frequently Asked Questions</h3>
                 </div>
                 <br>
                 <div class="panel-body">

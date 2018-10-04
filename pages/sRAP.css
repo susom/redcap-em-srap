@@ -57,6 +57,11 @@ h3 {
     color: dimgrey;
     font-weight: bold;
 }
+
+th {
+    color: #990033;
+    background-color: #C0C0C0;
+}
 /*
 div.panel-body.hero {
     padding-top: 20px;
@@ -111,9 +116,9 @@ body {
     max-height: 30px !important;
 }
 
-.navbar a { font-size: 14px !important }
+.navbar a { font-size: 16px !important }
 .navbar span {
-    font-size: 14px !important;
+    font-size: 16px !important;
 }
 
 .modal-title {
@@ -124,18 +129,21 @@ body {
     background-color: #990033 !important;
     color: #ffffff;
 }
+
 .modal-body {
     font-size: medium;
 }
 
+.modal button{
+    background-color: #990033 !important;
+
+}
 
 #custom-badge {
     background-color: #990033 !important;
-/*
-    background-color: #808080 !important;
-*/
-    outline-color: #990033 !important;
-    color: white;
+    /*
+    color: #990033 !important;
+    */
 }
 
 #research {
@@ -188,6 +196,14 @@ body {
 
 * {
     box-sizing: border-box;
+}
+
+a {
+    color: #0c5460;
+}
+
+a:hover {
+    color: #a1a1a1;
 }
 
 h1 {
