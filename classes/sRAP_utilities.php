@@ -9,7 +9,7 @@ require_once ($module->getModulePath() . "pages/sRAP_setup.php");
 
 function filterProjects($pid, $requestor=null) {
 
-    global $user;
+    global $user, $module;
     $id_fields = array("id");
 
     if (is_null($requestor) or empty($requestor)) {
@@ -20,12 +20,16 @@ function filterProjects($pid, $requestor=null) {
 
     // Also see if there projects where this person is a user
     $filter = '[u_sunet] = "' . $filterBy . '"';
+    $module->emDebug("This is the filter for projects: " . $filter);
     $project_ids = REDCap::getData($pid, "json", null, $id_fields, null, null, false, false, false, $filter);
+    $module->emDebug("List of projects: " . $project_ids);
     $results1 = json_decode($project_ids);
 
     // Also see if there projects where this person is the PI
     $filter = '[rp_pi_sunetid] = "' . $filterBy . '"';
+    $module->emDebug("This is the filter for PIs: " . $filter);
     $project_ids = REDCap::getData($pid, "json", null, $id_fields, null, null, false, false, false, $filter);
+    $module->emDebug("List of projects: " . $project_ids);
     $results2 = json_decode($project_ids);
     $results = array_merge($results1, $results2);
 
@@ -235,12 +239,12 @@ function get_Requests($pid, $record_id) {
 }
 
 function get_IRBBySunetID($sunetid) {
-    $tokenMgnt = \ExternalModules\ExternalModules::getModuleInstance('irb');
+    $tokenMgnt = \ExternalModules\ExternalModules::getModuleInstance('irb_lookup');
     return $tokenMgnt->getIRBAllBySunetID($sunetid);
 }
 
 function get_IRBByIRBNum($irb_num) {
-    $tokenMgnt = \ExternalModules\ExternalModules::getModuleInstance('irb');
+    $tokenMgnt = \ExternalModules\ExternalModules::getModuleInstance('irb_lookup');
     return $tokenMgnt->getAllIRBData($irb_num);
 }
 
@@ -326,23 +330,15 @@ function getSelectOptions($field, $current_value=null) {
     return $html;
 }
 
-function saveRepeatingForm($record_id1, $instrument1, $instance_id1, $data1)
+function saveRepeatingForm($record_id, $instrument, $instance_id, $data)
 {
-    global $module;
+    global $module, $pid;
 
     $data = array();
     $record_id = null;
     $instrument = null;
     $instance_id = null;
-    if ($instrument1 == 'users') {
-        $data = array("u_firstname" => "TestFirstName",
-                      "u_lastname"  => "TestLastName"
-                    );
-        $record_id = 11;
-        $instrument = 'users';
-        $instance_id = 4;
-        $pid = 27;
-    }
+
     $module->emLog("For pid $pid instrument $instrument, instance_id $instance_id and record_id $record_id: data", $data);
     $repeating_form = new sRAP_instances($pid, $instrument);
     if (is_null($instance_id)) {
@@ -363,7 +359,7 @@ function retrieveUserInfo($new_sunetid) {
     $user_data = array();
     if (!is_null($new_sunetid)) {
         // Call lookup for this user
-        $spl = ExternalModules\ExternalModules::getModuleInstance('redcap-em-stanford-person-lookup');
+        $spl = ExternalModules\ExternalModules::getModuleInstance('stanford_person_lookup');
         $spl_results = $spl->personLookup($new_sunetid);
 
         // If Lookup was successful, save the data retrieved

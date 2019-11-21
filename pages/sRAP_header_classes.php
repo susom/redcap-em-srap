@@ -176,4 +176,3 @@ $html = '<nav class="navbar navbar-expand-lg navbar-dark bg-dark justify-content
     return $html;
 }
 
-?>

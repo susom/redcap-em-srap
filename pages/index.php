@@ -23,7 +23,7 @@ if ($action == 'pi_projects') {
     $pi_projects = null;
     $pi_last_name = null;
     $project_data = array();
-    $spl = ExternalModules\ExternalModules::getModuleInstance('redcap-em-stanford-person-lookup');
+    $spl = ExternalModules\ExternalModules::getModuleInstance('stanford_person_lookup');
     $spl_results = $spl->personLookup($pi_sunetid);
     if ($spl_results["success"] == true) {
         $pi_last_name = $spl_results["user"]["last_name"];
@@ -151,7 +151,7 @@ if ($action == 'pi_projects') {
     } else {
         // Get SPL info for PI
         $project_data = array();
-        $spl = ExternalModules\ExternalModules::getModuleInstance('redcap-em-stanford-person-lookup');
+        $spl = ExternalModules\ExternalModules::getModuleInstance('stanford_person_lookup');
         $spl_results = $spl->personLookup($pi_sunetid);
 
         if ($spl_results["success"] == true) {
