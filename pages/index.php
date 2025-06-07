@@ -15,7 +15,8 @@ $user = USERID;
 $pi_projects = null;
 
 $pid = $module->getSystemSetting("portal_pid");
-DEFINE(PROJECT_PID, $pid);
+$module->emLog("this project doesnt even exist anymore?", $pid);
+// DEFINE(PROJECT_PID, $pid);
 
 $action = isset($_POST['action']) && !empty($_POST['action']) ? $_POST['action'] : null;
 if ($action == 'pi_projects') {

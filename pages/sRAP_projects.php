@@ -5,7 +5,7 @@ namespace Stanford\sRAP;
 use \REDCap;
 
 $pid = $module->getSystemSetting("portal_pid");
-DEFINE(PROJECT_PID, $pid);
+// DEFINE(PROJECT_PID, $pid);
 $user = USERID;
 
 global $pid, $user;
